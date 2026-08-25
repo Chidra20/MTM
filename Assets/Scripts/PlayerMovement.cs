@@ -85,24 +85,41 @@ public class PlayerScript : MonoBehaviour
         // -------------------------
         // WALL CHECK (Djump)
         // -------------------------
+
         canDJump = false;
 
         if (checkWall != null)
         {
             RaycastHit2D wallHit = Physics2D.Raycast(
                 checkWall.position,
-                checkWall.right,           // respects facing direction
+                checkWall.right,
                 wallCheckDistance,
                 djumpLayer
             );
 
-            if (wallHit.collider != null &&
-                !canJump &&
-                wallHit.collider.CompareTag("Djump"))
+            if (wallHit.collider != null)
             {
-                canDJump = true;
-                djumpWallNormal = wallHit.normal;
+                Debug.Log(
+                    "Wall hit: " +
+                    wallHit.collider.name +
+                    " | Tag: " +
+                    wallHit.collider.tag
+                );
+
+                if (!canJump && wallHit.collider.CompareTag("Djump"))
+                {
+                    canDJump = true;
+                    djumpWallNormal = wallHit.normal;
+
+                    Debug.Log("DJUMP WALL DETECTED!");
+                }
             }
+
+            Debug.DrawRay(
+                checkWall.position,
+                checkWall.right * wallCheckDistance,
+                canDJump ? Color.green : Color.red
+            );
         }
 
         // -------------------------
