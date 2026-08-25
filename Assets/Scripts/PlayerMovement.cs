@@ -21,10 +21,12 @@ public class PlayerScript : MonoBehaviour
     public float coyoteTime = 0.12f;
     public float jumpBufferTime = 0.12f;
 
-    [Header("Wall Check")]
-    public Transform checkWall;
+    [Header("Djump")]
+    public Transform checkWall;                 // ← was missing
+    public float djumpUpForce = 10f;
+    public float djumpAwayForce = 12f;
     public float wallCheckDistance = 0.5f;
-    public LayerMask wallLayer;
+    public LayerMask djumpLayer;
 
     [Header("UI")]
     public Text sprintText;
@@ -33,6 +35,7 @@ public class PlayerScript : MonoBehaviour
 
     private bool canJump;
     private bool canDJump;
+    private Vector2 djumpWallNormal;
 
     private float coyoteTimer;
     private float jumpBufferTimer;
@@ -41,11 +44,11 @@ public class PlayerScript : MonoBehaviour
     private float sprintCooldownTimer;
 
     private float moveInput;
+    private bool isSprinting;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
-
         sprintTimer = sprintDuration;
     }
 
@@ -54,13 +57,11 @@ public class PlayerScript : MonoBehaviour
         // -------------------------
         // MOVEMENT INPUT
         // -------------------------
-
         moveInput = Input.GetAxisRaw("Horizontal");
 
         // -------------------------
-        // GROUND CHECK
+        // GROUND CHECK + COYOTE
         // -------------------------
-
         canJump = Physics2D.Raycast(
             checkGround.position,
             Vector2.down,
@@ -68,117 +69,128 @@ public class PlayerScript : MonoBehaviour
             groundLayer
         );
 
-        // Coyote time
         if (canJump)
-        {
             coyoteTimer = coyoteTime;
-        }
         else
-        {
             coyoteTimer -= Time.deltaTime;
-        }
 
         // -------------------------
         // JUMP BUFFER
         // -------------------------
-
         if (Input.GetKeyDown(KeyCode.W))
-        {
             jumpBufferTimer = jumpBufferTime;
-        }
         else
-        {
             jumpBufferTimer -= Time.deltaTime;
+
+        // -------------------------
+        // WALL CHECK (Djump)
+        // -------------------------
+        canDJump = false;
+
+        if (checkWall != null)
+        {
+            RaycastHit2D wallHit = Physics2D.Raycast(
+                checkWall.position,
+                checkWall.right,           // respects facing direction
+                wallCheckDistance,
+                djumpLayer
+            );
+
+            if (wallHit.collider != null &&
+                !canJump &&
+                wallHit.collider.CompareTag("Djump"))
+            {
+                canDJump = true;
+                djumpWallNormal = wallHit.normal;
+            }
         }
 
         // -------------------------
-        // JUMP
+        // JUMP / DJUMP
         // -------------------------
-
         if (jumpBufferTimer > 0f && coyoteTimer > 0f)
         {
             Jump();
-
             jumpBufferTimer = 0f;
             coyoteTimer = 0f;
+        }
+        else if (Input.GetKeyDown(KeyCode.W) && canDJump)
+        {
+            Djump();
+            canDJump = false;
         }
 
         // -------------------------
         // SPRINT
         // -------------------------
-
         if (sprintCooldownTimer > 0f)
-        {
             sprintCooldownTimer -= Time.deltaTime;
-        }
 
-        bool sprinting =
-            Input.GetKey(KeyCode.Space) &&
-            sprintTimer > 0f &&
-            sprintCooldownTimer <= 0f;
+        isSprinting = Input.GetKey(KeyCode.Space) &&
+                      sprintTimer > 0f &&
+                      sprintCooldownTimer <= 0f;
 
-        if (sprinting)
+        if (isSprinting)
         {
             sprintTimer -= Time.deltaTime;
-        }
 
-        // Sprint released or depleted
-        if (!Input.GetKey(KeyCode.Space) || sprintTimer <= 0f)
-        {
             if (sprintTimer <= 0f)
             {
+                sprintTimer = 0f;
                 sprintCooldownTimer = sprintCooldown;
             }
-
-            sprintTimer = Mathf.Min(
-                sprintTimer + Time.deltaTime,
-                sprintDuration
-            );
+        }
+        else
+        {
+            // Regen only when not sprinting
+            sprintTimer = Mathf.Min(sprintTimer + Time.deltaTime, sprintDuration);
         }
 
         // -------------------------
         // UI
         // -------------------------
-
         if (sprintText != null)
         {
             if (sprintCooldownTimer > 0f)
-            {
-                sprintText.text =
-                    "Sprint: " + sprintCooldownTimer.ToString("0.0");
-            }
+                sprintText.text = "Sprint: " + sprintCooldownTimer.ToString("0.0");
+            else if (sprintTimer < sprintDuration)
+                sprintText.text = "Sprint: " + sprintTimer.ToString("0.0");
             else
-            {
                 sprintText.text = "Sprint Ready";
-            }
         }
+
+        // -------------------------
+        // FACING
+        // -------------------------
+        if (moveInput > 0f)
+            transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+        else if (moveInput < 0f)
+            transform.rotation = Quaternion.Euler(0f, 180f, 0f);
     }
 
     void FixedUpdate()
     {
         float speed = moveSpeed;
 
-        bool sprinting =
-            Input.GetKey(KeyCode.Space) &&
-            sprintTimer > 0f &&
-            sprintCooldownTimer <= 0f;
-
-        if (sprinting)
-        {
+        if (isSprinting)
             speed *= sprintMultiplier;
-        }
 
-        rb.linearVelocity = new Vector2(
-            moveInput * speed,
-            rb.linearVelocity.y
-        );
+        rb.linearVelocity = new Vector2(moveInput * speed, rb.linearVelocity.y);
     }
 
     void Jump()
     {
-        rb.linearVelocity = new Vector2(
-            rb.linearVelocity.x,
-            jumpForce
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
+    }
+
+    void Djump()
+    {
+        Vector2 force = new Vector2(
+            djumpWallNormal.x * djumpAwayForce,
+            djumpUpForce
         );
+
+        rb.linearVelocity = Vector2.zero;
+        rb.AddForce(force, ForceMode2D.Impulse);
     }
 }
