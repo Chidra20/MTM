@@ -6,22 +6,22 @@ public class PlayerDetector : MonoBehaviour
 
     private void Start()
     {
-        cameraController = FindAnyObjectByType<CameraController>();
+        cameraController = FindFirstObjectByType<CameraController>();
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.CompareTag("hallCam"))
+        if (other.CompareTag("corridorArea"))
         {
-            cameraController.EnterHall();
+            cameraController.EnterCorridor(other);
         }
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
-        if (other.CompareTag("hallCam"))
+        if (other.CompareTag("corridorArea"))
         {
-            cameraController.ExitHall();
+            cameraController.ExitCorridor();
         }
     }
 }

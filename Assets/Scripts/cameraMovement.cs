@@ -1,42 +1,91 @@
 using UnityEngine;
+using Unity.Cinemachine;
 
 public class CameraController : MonoBehaviour
 {
-    [Header("Target")]
+    [Header("References")]
+    public CinemachineCamera cinemachineCamera;
     public Transform player;
 
-    [Header("Hall Settings")]
-    public float hallZoom = 5f;
+    [Header("Normal Camera")]
     public float normalZoom = 7f;
-    public float transitionSpeed = 5f;
 
-    private bool inHall;
-    private Camera cam;
+    [Header("Corridor")]
+    public float corridorPadding = 1f;
+    public float positionSmoothness = 8f;
+    public float zoomSmoothness = 5f;
+
+    private bool inCorridor;
+
+    private float corridorCenterY;
+    private float corridorZoom;
 
     void Start()
     {
-        cam = GetComponent<Camera>();
-        cam.orthographicSize = normalZoom;
+        cinemachineCamera.Lens.OrthographicSize = normalZoom;
     }
 
-    void Update()
+    void LateUpdate()
     {
-        float targetZoom = inHall ? hallZoom : normalZoom;
+        if (inCorridor)
+        {
+            UpdateCorridorCamera();
+        }
+        else
+        {
+            UpdateNormalCamera();
+        }
+    }
 
-        cam.orthographicSize = Mathf.Lerp(
-            cam.orthographicSize,
-            targetZoom,
-            transitionSpeed * Time.deltaTime
+    void UpdateCorridorCamera()
+    {
+        // Calculate desired position
+        Vector3 targetPosition = new Vector3(
+            player.position.x,
+            corridorCenterY,
+            transform.position.z
+        );
+
+        // Smooth movement
+        transform.position = Vector3.Lerp(
+            transform.position,
+            targetPosition,
+            positionSmoothness * Time.deltaTime
+        );
+
+        // Smooth zoom
+        cinemachineCamera.Lens.OrthographicSize = Mathf.Lerp(
+            cinemachineCamera.Lens.OrthographicSize,
+            corridorZoom,
+            zoomSmoothness * Time.deltaTime
         );
     }
 
-    public void EnterHall()
+    void UpdateNormalCamera()
     {
-        inHall = true;
+        // Cinemachine handles normal camera movement.
+        cinemachineCamera.Lens.OrthographicSize = Mathf.Lerp(
+            cinemachineCamera.Lens.OrthographicSize,
+            normalZoom,
+            zoomSmoothness * Time.deltaTime
+        );
     }
 
-    public void ExitHall()
+    public void EnterCorridor(Collider2D corridor)
     {
-        inHall = false;
+        inCorridor = true;
+
+        Bounds bounds = corridor.bounds;
+
+        // Exact middle of corridor
+        corridorCenterY = bounds.center.y;
+
+        // Fit entire corridor vertically
+        corridorZoom = (bounds.size.y / 2f) + corridorPadding;
+    }
+
+    public void ExitCorridor()
+    {
+        inCorridor = false;
     }
 }
