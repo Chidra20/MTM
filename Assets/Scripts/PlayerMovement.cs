@@ -171,7 +171,7 @@ public class PlayerScript : MonoBehaviour
         if (sprintCooldownTimer > 0f)
             sprintCooldownTimer -= Time.deltaTime;
 
-        isSprinting = Input.GetKey(sprintKey) && sprintTimer > 0f && sprintCooldownTimer <= 0f;
+        isSprinting = Input.GetKey(sprintKey) && sprintTimer > 0f && sprintCooldownTimer <= 0f && canJump;
 
         if (isSprinting)
         {
