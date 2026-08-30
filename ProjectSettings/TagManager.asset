@@ -8,6 +8,8 @@ TagManager:
   - Djump
   - hallCam
   - corridorArea
+  - ledgeArea
+  - bossArea
   layers:
   - Default
   - TransparentFX
