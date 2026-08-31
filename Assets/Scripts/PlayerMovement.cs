@@ -71,6 +71,8 @@ public class PlayerScript : MonoBehaviour
     private bool isSprinting;
     private float djumpCooldownTimer;
 
+    [Header("References")]
+    public Transform visual;
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -202,9 +204,23 @@ public class PlayerScript : MonoBehaviour
         // ----- FACING -----
         // Flips the player sprite left/right. Removing it keeps the sprite facing one direction only.
         if (moveInput > 0f)
-            transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+        {
+            visual.localScale = new Vector3(1f, 1f, 1f);
+            checkWall.localPosition = new Vector3(
+                Mathf.Abs(checkWall.localPosition.x),
+                checkWall.localPosition.y,
+                checkWall.localPosition.z
+            );
+        }
         else if (moveInput < 0f)
-            transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+        {
+            visual.localScale = new Vector3(-1f, 1f, 1f);
+            checkWall.localPosition = new Vector3(
+                -Mathf.Abs(checkWall.localPosition.x),
+                checkWall.localPosition.y,
+                checkWall.localPosition.z
+            );
+        }
     }
 
     void FixedUpdate()
